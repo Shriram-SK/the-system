@@ -14,11 +14,17 @@ const APP = (() => {
 
   // ── INIT ────────────────────────────────────────
   async function init() {
-    initSupabase();
+    const client = initSupabase();
+
+    if (!client) {
+      console.error('Supabase failed to initialize');
+      return;
+    }
+    
     await bootSequence();
 
     // Auth state listener
-    supabase.auth.onAuthStateChange(async (event, session) => {
+    supabaseClient.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         currentUser = session.user;
         await loadApp();
