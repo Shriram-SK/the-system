@@ -1,0 +1,106 @@
+/* ══════════════════════════════════════════════════
+   THE SYSTEM — animations.css
+══════════════════════════════════════════════════ */
+
+/* Particle burst on quest complete */
+@keyframes particleBurst {
+  0%   { transform: translate(0,0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+}
+
+.particle {
+  position: absolute;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: particleBurst .8s ease forwards;
+}
+
+/* XP float up */
+@keyframes floatUp {
+  0%   { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-80px); opacity: 0; }
+}
+
+/* Screen flash on level up */
+@keyframes screenFlash {
+  0%   { opacity: 0; }
+  15%  { opacity: .3; }
+  100% { opacity: 0; }
+}
+
+.screen-flash {
+  position: fixed;
+  inset: 0;
+  background: var(--blue);
+  pointer-events: none;
+  z-index: 4000;
+  animation: screenFlash .6s ease forwards;
+}
+
+/* Arise particles */
+@keyframes ariseParticle {
+  0%   { transform: translateY(0) translateX(0) scale(1); opacity: .8; }
+  100% { transform: translateY(var(--ty)) translateX(var(--tx)) scale(0); opacity: 0; }
+}
+
+.arise-particle {
+  position: absolute;
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: var(--purple);
+  animation: ariseParticle 2s ease infinite;
+}
+
+/* Stat increase flash */
+@keyframes statFlash {
+  0%,100% { opacity: 1; }
+  50%      { opacity: .3; color: var(--gold); }
+}
+
+.stat-flash { animation: statFlash .4s ease 2; }
+
+/* Quest complete sweep */
+@keyframes completeSweep {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0% 0 0); }
+}
+
+/* Shadow extraction rise */
+@keyframes shadowRise {
+  0%   { transform: translateY(30px) scale(.8); opacity: 0; filter: blur(4px); }
+  60%  { transform: translateY(-5px) scale(1.05); opacity: .9; filter: blur(0); }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.shadow-rise { animation: shadowRise .7s cubic-bezier(.4,0,.2,1) forwards; }
+
+/* Gate pulse for boss */
+@keyframes bossPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(255,74,74,.3); }
+  50%      { box-shadow: 0 0 20px 6px rgba(255,74,74,.1); }
+}
+
+.boss-pulse { animation: bossPulse 2s infinite; }
+
+/* Level-up ring */
+@keyframes levelRing {
+  0%   { transform: scale(.8); opacity: 1; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+.level-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid var(--blue);
+  animation: levelRing .8s ease forwards;
+}
+
+/* Heatmap fill-in animation */
+@keyframes heatIn {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+.hc { animation: heatIn .2s ease backwards; }

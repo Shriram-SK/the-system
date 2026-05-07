@@ -1,0 +1,127 @@
+/* ══════════════════════════════════════════════════
+   THE SYSTEM — components.css  (mobile-first extras)
+══════════════════════════════════════════════════ */
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* ── MOBILE NAV (bottom nav on small screens) ── */
+@media (max-width: 680px) {
+  .nav { height: 48px; }
+  .nav-links { display: none; }
+  .app-main { padding-top: 48px; }
+
+  .bottom-nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 1000;
+    background: rgba(4,4,10,.97);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    height: 56px;
+  }
+
+  .bottom-nav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 10px;
+    font-family: var(--font-mono);
+    letter-spacing: .5px;
+    transition: color .2s;
+    padding: 0;
+  }
+
+  .bottom-nav-btn .bn-icon { font-size: 18px; }
+  .bottom-nav-btn.active { color: var(--cyan); }
+
+  .panel { padding-bottom: 70px; }
+}
+
+@media (min-width: 681px) {
+  .bottom-nav { display: none; }
+}
+
+/* ── QUEST DIFFICULTY COLORS ── */
+.diff-easy   { color: var(--green); }
+.diff-normal { color: var(--blue); }
+.diff-hard   { color: var(--orange); }
+.diff-boss   { color: var(--red); }
+
+/* ── BOSS QUEST SPECIAL STYLING ── */
+.qi.boss {
+  background: linear-gradient(135deg, rgba(255,74,74,.06), rgba(155,109,255,.04));
+  border-color: rgba(255,74,74,.25);
+}
+
+/* ── SHADOW CARD GRADES ── */
+.grade-e .shadow-grade { color: var(--muted); }
+.grade-d .shadow-grade { color: var(--blue); }
+.grade-c .shadow-grade { color: var(--green); }
+.grade-b .shadow-grade { color: var(--gold); }
+.grade-a .shadow-grade { color: var(--orange); }
+.grade-s .shadow-grade { color: var(--red); }
+.grade-national .shadow-grade { color: var(--purple); }
+
+.grade-s  .shadow-icon,
+.grade-national .shadow-icon {
+  filter: drop-shadow(0 0 10px rgba(155,109,255,.7));
+}
+
+/* ── PWA install prompt ── */
+.pwa-prompt {
+  position: fixed;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-size: 13px;
+  color: var(--text);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 340px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0,0,0,.5);
+  animation: slideUp .3s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translate(-50%, 20px); opacity: 0; }
+  to   { transform: translate(-50%, 0); opacity: 1; }
+}
+
+/* ── Offline indicator ── */
+.offline-bar {
+  position: fixed;
+  top: 52px;
+  left: 0; right: 0;
+  z-index: 990;
+  background: var(--red-dim);
+  border-bottom: 1px solid var(--red);
+  padding: 4px 16px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--red);
+  letter-spacing: 2px;
+  text-align: center;
+  display: none;
+}
+
+body.offline .offline-bar { display: block; }
+body.offline .app-main { padding-top: calc(52px + 24px); }

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#04040a">
+<meta name="description" content="THE SYSTEM — Solo Leveling Life OS. Level up your real life.">
+<title>THE SYSTEM — Solo Leveling Life OS</title>
+
+<!-- PWA manifest -->
+<link rel="manifest" href="/manifest.json">
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+<!-- Styles -->
+<link rel="stylesheet" href="/src/css/main.css">
+<link rel="stylesheet" href="/src/css/animations.css">
+<link rel="stylesheet" href="/src/css/components.css">
+</head>
+<body>
+
+<!-- ══ LOADING SCREEN ══ -->
+<div id="loadingScreen" class="loading-screen">
+  <div class="loading-inner">
+    <div class="loading-rune">⬡</div>
+    <div class="loading-text">SYSTEM INITIALIZING</div>
+    <div class="loading-bar-bg"><div class="loading-bar-fill" id="loadBar"></div></div>
+    <div class="loading-sub" id="loadSub">Connecting to the System...</div>
+  </div>
+</div>
+
+<!-- ══ AUTH SCREEN ══ -->
+<div id="authScreen" class="auth-screen hidden">
+  <div class="auth-bg-effects">
+    <div class="auth-rune r1">⬡</div>
+    <div class="auth-rune r2">⬡</div>
+    <div class="auth-rune r3">⬡</div>
+  </div>
+  <div class="auth-card">
+    <div class="auth-arise">ARISE</div>
+    <div class="auth-title">THE SYSTEM</div>
+    <div class="auth-sub">Solo Leveling Life OS</div>
+    <div class="auth-desc">The System has chosen you. Sign in to begin your awakening.</div>
+    <button class="auth-btn google" id="googleSignIn">
+      <span class="auth-btn-icon">G</span>
+      Continue with Google
+    </button>
+    <div class="auth-divider"><span>or</span></div>
+    <input class="auth-input" id="authEmail" type="email" placeholder="Email address">
+    <input class="auth-input" id="authPassword" type="password" placeholder="Password">
+    <button class="auth-btn primary" id="emailSignIn">Sign In</button>
+    <button class="auth-btn secondary" id="emailSignUp">Create Account</button>
+    <div class="auth-note" id="authMsg"></div>
+  </div>
+</div>
+
+<!-- ══ MAIN APP ══ -->
+<div id="mainApp" class="hidden">
+
+  <!-- NAV -->
+  <nav class="nav" id="mainNav">
+    <div class="nav-logo">
+      <span class="nav-logo-rune">⬡</span>
+      SYSTEM
+    </div>
+    <div class="nav-links">
+      <button class="nav-btn active" data-panel="dashboard">🧍 Status</button>
+      <button class="nav-btn" data-panel="quests">⚔ Quests</button>
+      <button class="nav-btn" data-panel="shadows">👥 Shadows</button>
+      <button class="nav-btn" data-panel="habits">🔁 Habits</button>
+      <button class="nav-btn" data-panel="shop">🏪 Shop</button>
+      <button class="nav-btn" data-panel="awakening">🌌 Awakening</button>
+    </div>
+    <div class="nav-right">
+      <div class="nav-gold" id="navGold"><span>⬡</span> <span id="navGoldAmt">0</span></div>
+      <button class="nav-signout" id="signOutBtn" title="Sign out">⏻</button>
+    </div>
+  </nav>
+
+  <!-- PANELS -->
+  <main class="app-main">
+
+    <!-- ══ DASHBOARD ══ -->
+    <div class="panel active" id="panel-dashboard">
+      <div class="sys-alert" id="sysAlert">
+        <span class="alert-dot"></span>
+        <span id="alertText">SYSTEM ALERT — Awaiting player identification.</span>
+      </div>
+
+      <!-- Login Bonus -->
+      <div class="login-bonus hidden" id="loginBonus">
+        <div class="bonus-left">
+          <div class="bonus-title">✦ DAILY LOGIN BONUS</div>
+          <div class="bonus-sub" id="bonusSub">Maintain your streak to earn more</div>
+        </div>
+        <button class="btn btn-blue" id="claimBtn">CLAIM XP</button>
+      </div>
+
+      <!-- Player Card -->
+      <div class="player-card" id="playerCard">
+        <div class="player-card-glow"></div>
+        <div class="player-top">
+          <div class="player-left">
+            <div class="player-class-label" id="playerClass">◆ E-RANK HUNTER ◆</div>
+            <h2 class="player-name" id="playerName">PLAYER</h2>
+            <div class="player-title" id="playerTitle">The Weakest</div>
+          </div>
+          <div class="player-right">
+            <div class="rank-badge" id="rankBadge">
+              <span class="rank-letter" id="rankLetter">E</span>
+              <span class="rank-label">RANK</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- XP Bar -->
+        <div class="xp-section">
+          <div class="xp-label-row">
+            <span>EXPERIENCE</span>
+            <span id="xpText">0 / 100 XP</span>
+          </div>
+          <div class="xp-track">
+            <div class="xp-fill" id="xpFill"></div>
+            <div class="xp-particles" id="xpParticles"></div>
+          </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-row">
+          <div class="stat-box s-lv"><div class="sv" id="sLv">1</div><div class="sl">LVL</div></div>
+          <div class="stat-box s-xp"><div class="sv" id="sTXP">0</div><div class="sl">TOTAL XP</div></div>
+          <div class="stat-box s-gold"><div class="sv" id="sGold">0</div><div class="sl">GOLD</div></div>
+          <div class="stat-box s-streak"><div class="sv" id="sStreak">0</div><div class="sl">STREAK</div></div>
+          <div class="stat-box s-shadow"><div class="sv" id="sShadow">0</div><div class="sl">SHADOWS</div></div>
+        </div>
+
+        <!-- Attribute Stats -->
+        <div class="attr-section">
+          <div class="attr-title">PLAYER STATS</div>
+          <div class="attr-grid">
+            <div class="attr-item"><span class="attr-name">STR</span><div class="attr-bar-bg"><div class="attr-bar str-bar" id="aStr"></div></div><span class="attr-val" id="vStr">1</span></div>
+            <div class="attr-item"><span class="attr-name">AGI</span><div class="attr-bar-bg"><div class="attr-bar agi-bar" id="aAgi"></div></div><span class="attr-val" id="vAgi">1</span></div>
+            <div class="attr-item"><span class="attr-name">VIT</span><div class="attr-bar-bg"><div class="attr-bar vit-bar" id="aVit"></div></div><span class="attr-val" id="vVit">1</span></div>
+            <div class="attr-item"><span class="attr-name">INT</span><div class="attr-bar-bg"><div class="attr-bar int-bar" id="aInt"></div></div><span class="attr-val" id="vInt">1</span></div>
+            <div class="attr-item"><span class="attr-name">PER</span><div class="attr-bar-bg"><div class="attr-bar per-bar" id="aPer"></div></div><span class="attr-val" id="vPer">1</span></div>
+            <div class="attr-item"><span class="attr-name">SEN</span><div class="attr-bar-bg"><div class="attr-bar sen-bar" id="aSen"></div></div><span class="attr-val" id="vSen">1</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Today's Quest Summary -->
+      <div class="sec-head">
+        <h3>TODAY'S MISSIONS</h3>
+        <div class="sec-line"></div>
+        <div class="sec-tag" id="dashQTag">0 / 0</div>
+      </div>
+      <div class="quest-list" id="dashQList"></div>
+
+      <!-- Rank Progression -->
+      <div class="sec-head" style="margin-top:28px;">
+        <h3>RANK PROGRESSION</h3><div class="sec-line"></div>
+      </div>
+      <div class="rank-progression" id="rankProgression"></div>
+    </div>
+
+    <!-- ══ QUESTS ══ -->
+    <div class="panel hidden" id="panel-quests">
+      <div class="gate-header">
+        <div class="gate-rank" id="gateRank">E</div>
+        <div class="gate-info">
+          <div class="gate-title">DAILY GATE</div>
+          <div class="gate-sub" id="gateDate">Loading...</div>
+        </div>
+        <div class="gate-timer" id="gateTimer">--:--:--</div>
+      </div>
+
+      <div class="quest-categories" id="questCategories"></div>
+    </div>
+
+    <!-- ══ SHADOWS ══ -->
+    <div class="panel hidden" id="panel-shadows">
+      <div class="sys-alert">
+        <span class="alert-dot" style="background:var(--purple)"></span>
+        <span>SHADOW ARMY — Every completed Boss Quest extracts a new shadow soldier.</span>
+      </div>
+      <div class="shadows-header">
+        <div class="shadows-arise">
+          <span class="arise-text-small">ARISE</span>
+        </div>
+        <div class="shadows-count-display">
+          <div class="sc-num" id="shadowCount">0</div>
+          <div class="sc-label">SHADOWS UNDER COMMAND</div>
+        </div>
+      </div>
+      <div class="shadow-grid" id="shadowGrid">
+        <div class="shadow-empty">
+          <div class="se-icon">⬡</div>
+          <div class="se-text">No shadows yet. Complete Boss Quests to extract shadow soldiers.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ HABITS ══ -->
+    <div class="panel hidden" id="panel-habits">
+      <div class="sys-alert">
+        <span class="alert-dot" style="background:var(--green)"></span>
+        <span>HABIT MATRIX — Consistency builds your shadow army. Break the chain and face regression.</span>
+      </div>
+      <div class="habit-add-row">
+        <input class="si" id="habitName" placeholder="Habit name (e.g. Morning run, No sugar)...">
+        <select class="si" id="habitXP">
+          <option value="10,str">+10 XP → STR</option>
+          <option value="10,agi">+10 XP → AGI</option>
+          <option value="10,vit">+10 XP → VIT</option>
+          <option value="20,int">+20 XP → INT</option>
+          <option value="20,per">+20 XP → PER</option>
+          <option value="30,sen">+30 XP → SEN</option>
+        </select>
+        <button class="btn btn-blue" id="addHabitBtn">+ ADD HABIT</button>
+      </div>
+      <div class="sec-head"><h3>ACTIVE HABITS</h3><div class="sec-line"></div></div>
+      <div class="quest-list" id="habitList"></div>
+      <div class="sec-head" style="margin-top:24px;"><h3>84-DAY HEATMAP</h3><div class="sec-line"></div></div>
+      <div class="heatmap-wrap">
+        <div class="heat-labels" id="heatLabels"></div>
+        <div class="heatmap-grid" id="heatmap"></div>
+        <div class="heat-legend">
+          <span>LESS</span>
+          <div class="hl l0"></div><div class="hl l1"></div><div class="hl l2"></div><div class="hl l3"></div><div class="hl l4"></div>
+          <span>MORE</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SHOP ══ -->
+    <div class="panel hidden" id="panel-shop">
+      <div class="shop-banner">
+        <div class="shop-banner-left">
+          <div class="shop-banner-label">GOLD BALANCE</div>
+          <div class="shop-gold-amt" id="shopGoldAmt">0 G</div>
+        </div>
+        <div class="shop-banner-right">Complete quests daily to accumulate Gold. Spend wisely.</div>
+      </div>
+      <div class="sec-head"><h3>🎮 FREE TIME REWARDS</h3><div class="sec-line"></div></div>
+      <div class="shop-grid" id="shopGrid"></div>
+      <div class="sec-head" style="margin-top:24px;"><h3>✦ ADD CUSTOM REWARD</h3><div class="sec-line"></div></div>
+      <div class="custom-add-row">
+        <input class="si" id="rName" placeholder="Reward name...">
+        <input class="si" id="rCost" type="number" placeholder="Gold cost..." style="width:130px;">
+        <input class="si" id="rIcon" placeholder="Emoji..." style="width:80px;">
+        <button class="btn btn-gold" id="addRewardBtn">+ ADD</button>
+      </div>
+      <div class="shop-grid" id="customShopGrid" style="margin-top:12px;"></div>
+    </div>
+
+    <!-- ══ AWAKENING ══ -->
+    <div class="panel hidden" id="panel-awakening">
+      <div class="arise-hero">
+        <div class="arise-particles" id="ariseParticles"></div>
+        <div class="arise-big" id="ariseBig">ARISE</div>
+        <div class="arise-monarch">— I ALONE LEVEL UP —</div>
+      </div>
+      <div class="vision-grid">
+        <div class="vision-card pos">
+          <div class="vc-title">🌟 VISION</div>
+          <div class="vc-sub">Who you are becoming</div>
+          <textarea class="vc-ta" id="visionTA" placeholder="Write who you are becoming. The lean, strong, disciplined, successful version. Be ruthless with ambition. Make it ache."></textarea>
+          <button class="btn btn-blue" id="saveVisionBtn" style="margin-top:10px;">SAVE VISION</button>
+        </div>
+        <div class="vision-card neg">
+          <div class="vc-title">💀 ANTI-VISION</div>
+          <div class="vc-sub">What failure looks like</div>
+          <textarea class="vc-ta" id="antiVisionTA" placeholder="Write the life you refuse to live. The version that gave up, stayed soft, and regrets every day. Read this when you want to quit."></textarea>
+          <button class="btn btn-red" id="saveAntiBtn" style="margin-top:10px;">SAVE ANTI-VISION</button>
+        </div>
+      </div>
+      <div class="oath-box">
+        <div class="oath-text">
+          "I alone level up.<br>
+          I do not beg the System for mercy.<br>
+          I do not ask for an easier path — I ask to become stronger.<br>
+          Every completed quest is a shadow earned.<br>
+          Every broken habit is a throne surrendered.<br>
+          I will not stop until I become the Shadow Monarch of my own life."
+        </div>
+        <div class="oath-label">— THE PLAYER'S OATH —</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══ OVERLAYS ══ -->
+
+<!-- Penalty Modal -->
+<div class="modal-ov hidden" id="penaltyModal">
+  <div class="modal penalty-modal">
+    <div class="modal-icon">⚠</div>
+    <h3>SYSTEM PENALTY</h3>
+    <p id="penaltyMsg">You have abandoned a quest.</p>
+    <div class="modal-acts">
+      <button class="btn btn-red" id="acceptPenalty">ACCEPT PENALTY</button>
+    </div>
+  </div>
+</div>
+
+<!-- Level Up Modal -->
+<div class="modal-ov hidden" id="levelUpModal">
+  <div class="modal levelup-modal">
+    <div class="levelup-particles" id="luParticles"></div>
+    <div class="levelup-rank" id="luRank">D</div>
+    <div class="levelup-title">LEVEL UP</div>
+    <div class="levelup-sub" id="luSub">You have reached Level 5</div>
+    <div class="levelup-rank-change" id="luRankChange"></div>
+    <button class="btn btn-blue" id="closeLevelUp">CONTINUE</button>
+  </div>
+</div>
+
+<!-- Arise Modal (Boss complete) -->
+<div class="modal-ov hidden" id="ariseModal">
+  <div class="modal arise-modal">
+    <div class="arise-modal-particles" id="amParticles"></div>
+    <div class="arise-modal-word">ARISE</div>
+    <div class="arise-modal-shadow" id="newShadowName">SHADOW SOLDIER</div>
+    <div class="arise-modal-grade" id="newShadowGrade">GRADE: D</div>
+    <button class="btn btn-blue" id="closeAriseModal">ADD TO ARMY</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast hidden" id="toast"></div>
+
+<!-- XP Float -->
+<div class="xp-float hidden" id="xpFloat">+0 XP</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/src/js/config.js"></script>
+<script src="/src/js/db.js"></script>
+<script src="/src/js/quests.js"></script>
+<script src="/src/js/ui.js"></script>
+<script src="/src/js/app.js"></script>
+</body>
+</html>
