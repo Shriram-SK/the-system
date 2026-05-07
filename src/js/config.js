@@ -5,7 +5,7 @@
 // ══════════════════════════════════════════════════
 
 const CONFIG = {
-  SUPABASE_URL: 'https://nkkkbrvqdbjqixlupnqw.supabase.co/rest/v1/',       // e.g. https://abcdef.supabase.co
+  SUPABASE_URL: 'https://nkkkbrvqdbjqixlupnqw.supabase.co',       // e.g. https://abcdef.supabase.co
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ra2ticnZxZGJqcWl4bHVwbnF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNjMwNzQsImV4cCI6MjA5MzczOTA3NH0.0Z19M2UcDo7jI2lnjV6BFmN1PW5n_U4CRaKELK4ZnNM', // eyJh...
 };
 
