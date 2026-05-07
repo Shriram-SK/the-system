@@ -13,31 +13,40 @@ const APP = (() => {
   let pendingPenaltyQuestId = null;
 
   // ── INIT ────────────────────────────────────────
-  async function init() {
-    const client = initSupabase();
+async function init() {
+  const client = initSupabase();
 
-    if (!client) {
-      console.error('Supabase failed to initialize');
-      return;
-    }
-    
-    await bootSequence();
-
-    // Auth state listener
-    supabaseClient.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        currentUser = session.user;
-        await loadApp();
-      } else {
-        currentUser = null;
-        showAuthScreen();
-      }
-    });
-
-    // Offline detection
-    window.addEventListener('offline', () => document.body.classList.add('offline'));
-    window.addEventListener('online', () => document.body.classList.remove('offline'));
+  if (!client) {
+    console.error('Supabase failed to initialize');
+    return;
   }
+
+  await bootSequence();
+
+  // IMPORTANT:
+  // Wire auth/login button events BEFORE authentication
+  wireEvents();
+
+  // Auth state listener
+  supabaseClient.auth.onAuthStateChange(async (event, session) => {
+    if (session?.user) {
+      currentUser = session.user;
+      await loadApp();
+    } else {
+      currentUser = null;
+      showAuthScreen();
+    }
+  });
+
+  // Offline detection
+  window.addEventListener('offline', () => {
+    document.body.classList.add('offline');
+  });
+
+  window.addEventListener('online', () => {
+    document.body.classList.remove('offline');
+  });
+}
 
   // ── BOOT SEQUENCE ────────────────────────────────
   async function bootSequence() {
@@ -106,7 +115,6 @@ const APP = (() => {
     renderShop(player.gold, customRewards);
     renderAwakening(player);
 
-    wireEvents();
   }
 
   // ── WIRE EVENTS ──────────────────────────────────
