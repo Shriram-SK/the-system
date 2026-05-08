@@ -16,6 +16,9 @@ const APP = (() => {
   let _claimBusy = false;
   const _inFlightHabits = new Set();
 
+  // Pending delete state (habit)
+  let _pendingDeleteHabitId = null;
+
   // ── INIT ────────────────────────────────────────
 async function init() {
   const client = initSupabase();
@@ -179,6 +182,31 @@ async function init() {
     document.getElementById('saveVisionBtn').onclick = saveVision;
     document.getElementById('saveAntiBtn').onclick = saveAntiVision;
 
+    // Delete confirm modal
+    document.getElementById('confirmDelete').onclick = async () => {
+      const id = _pendingDeleteHabitId;
+      _pendingDeleteHabitId = null;
+      document.getElementById('deleteModal').classList.add('hidden');
+      if (!id) return;
+      try {
+        await deleteHabit(id);
+        habits = habits.filter(h => h.id !== id);
+        renderHabits(habits);
+      } catch (e) {
+        showToast('Error deleting habit: ' + e.message, 'pen');
+      }
+    };
+    document.getElementById('cancelDelete').onclick = () => {
+      _pendingDeleteHabitId = null;
+      document.getElementById('deleteModal').classList.add('hidden');
+    };
+    document.getElementById('deleteModal').onclick = (e) => {
+      if (e.target === e.currentTarget) {
+        _pendingDeleteHabitId = null;
+        document.getElementById('deleteModal').classList.add('hidden');
+      }
+    };
+
     // Penalty modal
     document.getElementById('acceptPenalty').onclick = acceptPenalty;
     document.getElementById('cancelPenalty').onclick = () => {
@@ -201,6 +229,56 @@ async function init() {
     document.getElementById('ariseModal').onclick = (e) => {
       if (e.target === e.currentTarget) document.getElementById('ariseModal').classList.add('hidden');
     };
+
+    // ── Delegated listeners — replace all inline onclick in rendered HTML ──
+
+    // Quest action buttons (main quests tab + dashboard preview)
+    ['questCategories', 'dashQList'].forEach(id => {
+      document.getElementById(id)?.addEventListener('click', e => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const questId = parseInt(btn.dataset.id, 10);
+        if (btn.dataset.action === 'complete') completeQuest(questId, e);
+        else if (btn.dataset.action === 'fail') failQuest(questId);
+      });
+    });
+
+    // Habit action buttons
+    document.getElementById('habitList')?.addEventListener('click', e => {
+      const btn = e.target.closest('button[data-action]');
+      if (!btn) return;
+      const habitId = parseInt(btn.dataset.id, 10);
+      if (btn.dataset.action === 'done-habit') doneHabit(habitId);
+      else if (btn.dataset.action === 'delete-habit') deleteHabitUI(habitId);
+    });
+
+    // Default shop reward cards (data-id is a string key like 'sr1')
+    document.getElementById('shopGrid')?.addEventListener('click', e => {
+      const card = e.target.closest('[data-action="buy-reward"]');
+      if (!card) return;
+      const r = DEFAULT_REWARDS.find(x => x.id === card.dataset.id);
+      if (r) _purchaseReward(r.name, r.cost, r.icon, false);
+    });
+
+    // Custom shop reward cards + remove buttons
+    document.getElementById('customShopGrid')?.addEventListener('click', e => {
+      const target = e.target.closest('[data-action]');
+      if (!target) return;
+      const id = parseInt(target.dataset.id, 10);
+      if (target.dataset.action === 'buy-custom') {
+        // Only fire purchase if click was NOT on the remove button inside the card
+        buyCustomReward(id);
+      } else if (target.dataset.action === 'remove-custom') {
+        deleteCustomRewardUI(id);
+      }
+    });
+
+    // Bottom nav (created lazily by renderBottomNav — use body-level delegation)
+    document.body.addEventListener('click', e => {
+      const btn = e.target.closest('.bottom-nav-btn[data-panel]');
+      if (!btn) return;
+      switchPanel(btn.dataset.panel);
+    });
   }
 
   // ── PANEL SWITCH ─────────────────────────────────
@@ -448,17 +526,13 @@ async function init() {
     }
   }
 
-  async function deleteHabitUI(habitId) {
+  function deleteHabitUI(habitId) {
     const h = habits.find(x => x.id === habitId);
     if (!h) return;
-    if (!confirm(`Remove habit "${h.name}"? This cannot be undone.`)) return;
-    try {
-      await deleteHabit(habitId);
-      habits = habits.filter(x => x.id !== habitId);
-      renderHabits(habits);
-    } catch (e) {
-      showToast('Error deleting habit: ' + e.message, 'pen');
-    }
+    _pendingDeleteHabitId = habitId;
+    document.getElementById('deleteMsg').textContent =
+      `Remove habit "${h.name}"? This cannot be undone.`;
+    document.getElementById('deleteModal').classList.remove('hidden');
   }
 
   // ── SHOP ─────────────────────────────────────────
@@ -552,11 +626,14 @@ async function init() {
 
   // ── HEATMAP BUMP ─────────────────────────────────
   function bumpHeatmap() {
-    if (!player.heatmap) player.heatmap = new Array(84).fill(0);
-    const today = new Date();
-    const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 86400000);
+    // Deep-clone to avoid mutating the shared player reference mid-flight
+    // (two actions in the same tick would both read the pre-mutation value otherwise)
+    const base = Array.isArray(player.heatmap) ? [...player.heatmap] : new Array(84).fill(0);
+    const now = new Date();
+    const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
     const idx = Math.min(dayOfYear % 84, 83);
-    player.heatmap[idx] = Math.min(4, (player.heatmap[idx] || 0) + 1);
+    base[idx] = Math.min(4, (base[idx] || 0) + 1);
+    player.heatmap = base;
   }
 
   // ── UTILS ────────────────────────────────────────

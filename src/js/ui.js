@@ -173,8 +173,8 @@ function renderQuestItem(q) {
     </div>
     ${!q.completed && !q.failed ? `
     <div class="qi-acts">
-      <button class="btn btn-green btn-sm" onclick="APP.completeQuest(${q.id}, event)">✓</button>
-      <button class="btn btn-red btn-sm" onclick="APP.failQuest(${q.id})">✗</button>
+      <button class="btn btn-green btn-sm" data-action="complete" data-id="${q.id}">✓</button>
+      <button class="btn btn-red btn-sm" data-action="fail" data-id="${q.id}">✗</button>
     </div>` : q.completed
       ? `<div class="qi-done-check">✓</div>`
       : `<div class="qi-failed-label">FAILED</div>`}
@@ -309,9 +309,9 @@ function renderHabits(habits) {
       </div>
       <div class="qi-acts">
         ${!done
-          ? `<button class="btn btn-green btn-sm" onclick="APP.doneHabit(${h.id})">DONE</button>`
+          ? `<button class="btn btn-green btn-sm" data-action="done-habit" data-id="${h.id}">DONE</button>`
           : `<span class="habit-complete-label">COMPLETE</span>`}
-        <button class="btn btn-red btn-sm" onclick="APP.deleteHabitUI(${h.id})" title="Delete habit">✕</button>
+        <button class="btn btn-red btn-sm" data-action="delete-habit" data-id="${h.id}" title="Delete habit">✕</button>
       </div>
     </div>`;
   }).join('');
@@ -334,7 +334,7 @@ function renderShop(gold, customRewards) {
   const grid = document.getElementById('shopGrid');
   grid.innerHTML = DEFAULT_REWARDS.map(r => {
     const canAfford = gold >= r.cost;
-    return `<div class="sc ${!canAfford ? 'locked' : ''}" onclick="APP.buyReward('${r.id}','${r.name}',${r.cost},'${r.icon}')">
+    return `<div class="sc ${!canAfford ? 'locked' : ''}" data-action="buy-reward" data-id="${r.id}">
       <div class="sc-icon">${r.icon}</div>
       <div class="sc-name">${r.name}</div>
       <div class="sc-cost">${r.cost} Gold</div>
@@ -348,12 +348,12 @@ function renderShop(gold, customRewards) {
   } else {
     cgrid.innerHTML = customRewards.map(r => {
       const canAfford = gold >= r.cost;
-      // Only pass numeric ID — buyCustomReward looks up name/cost/icon locally (prevents XSS)
-      return `<div class="sc ${!canAfford ? 'locked' : ''}" onclick="APP.buyCustomReward(${r.id})">
+      // Only pass numeric ID via data attribute — buyCustomReward looks up data locally (prevents XSS)
+      return `<div class="sc ${!canAfford ? 'locked' : ''}" data-action="buy-custom" data-id="${r.id}">
         <div class="sc-icon">${escapeHTML(r.icon || '🎁')}</div>
         <div class="sc-name">${escapeHTML(r.name)}</div>
         <div class="sc-cost">${r.cost} Gold</div>
-        <button class="btn btn-red btn-sm" style="margin-top:8px;" onclick="event.stopPropagation();APP.deleteCustomRewardUI(${r.id})">REMOVE</button>
+        <button class="btn btn-red btn-sm" style="margin-top:8px;" data-action="remove-custom" data-id="${r.id}">REMOVE</button>
       </div>`;
     }).join('');
   }
@@ -397,7 +397,7 @@ function renderBottomNav() {
     {panel:'awakening', icon:'🌌', label:'Awaken'},
   ];
   nav.innerHTML = items.map(i =>
-    `<button class="bottom-nav-btn" data-panel="${i.panel}" onclick="APP.switchPanel('${i.panel}')">
+    `<button class="bottom-nav-btn" data-panel="${i.panel}">
       <span class="bn-icon">${i.icon}</span>
       <span>${i.label}</span>
     </button>`
