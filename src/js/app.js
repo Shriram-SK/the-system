@@ -140,9 +140,13 @@ async function init() {
       } catch(e) { setAuthMsg(e.message, true); }
     };
     document.getElementById('signOutBtn').onclick = async () => {
-      await signOut();
-      document.getElementById('mainApp').classList.add('hidden');
-      document.getElementById('authScreen').classList.remove('hidden');
+      try {
+        await signOut();
+        document.getElementById('mainApp').classList.add('hidden');
+        document.getElementById('authScreen').classList.remove('hidden');
+      } catch (e) {
+        showToast('Error signing out: ' + e.message, 'pen');
+      }
     };
 
     // Login bonus
@@ -189,28 +193,31 @@ async function init() {
 
   // ── LOGIN BONUS ──────────────────────────────────
   async function claimLoginBonus() {
-    const todayStr = today();
-    const prevStreak = player.streak || 0;
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-    const newStreak = player.last_login === yesterday ? prevStreak + 1 : 1;
-    const xpBonus = 50 + Math.min(newStreak - 1, 14) * 5;
-    const goldBonus = 10 + Math.floor(newStreak / 7) * 5;
+    try {
+      const todayStr = today();
+      const prevStreak = player.streak || 0;
+      const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+      const newStreak = player.last_login === yesterday ? prevStreak + 1 : 1;
+      const xpBonus = 50 + Math.min(newStreak - 1, 14) * 5;
+      const goldBonus = 10 + Math.floor(newStreak / 7) * 5;
 
-    player = await updatePlayer(currentUser.id, {
-      last_login: todayStr,
-      streak: newStreak,
-      xp: player.xp + xpBonus,
-      total_xp: player.total_xp + xpBonus,
-      gold: player.gold + goldBonus,
-    });
+      bumpHeatmap();
+      player = await updatePlayer(currentUser.id, {
+        last_login: todayStr,
+        streak: newStreak,
+        xp: (player.xp || 0) + xpBonus,
+        total_xp: (player.total_xp || 0) + xpBonus,
+        gold: (player.gold || 0) + goldBonus,
+        heatmap: player.heatmap,
+      });
 
-    bumpHeatmap();
-    player = await updatePlayer(currentUser.id, { heatmap: player.heatmap });
-
-    document.getElementById('loginBonus').classList.add('hidden');
-    showToast(`✦ LOGIN BONUS — +${xpBonus} XP, +${goldBonus} Gold | Streak: ${newStreak} days 🔥`, 'gold');
-    updateStatsUI(player);
-    checkLevelUp(player.xp - xpBonus, player.xp);
+      document.getElementById('loginBonus').classList.add('hidden');
+      showToast(`✦ LOGIN BONUS — +${xpBonus} XP, +${goldBonus} Gold | Streak: ${newStreak} days 🔥`, 'gold');
+      updateStatsUI(player);
+      checkLevelUp(player.xp - xpBonus, player.xp);
+    } catch (e) {
+      showToast('Error claiming bonus: ' + e.message, 'pen');
+    }
   }
 
   // ── QUEST COMPLETE ───────────────────────────────
@@ -226,51 +233,57 @@ async function init() {
     if (event) spawnParticles(event.clientX, event.clientY, 'var(--green)');
     showXPFloat(q.xp_reward, event?.clientX, event?.clientY);
 
-    // DB update
-    await completeQuestDB(questId);
+    try {
+      // DB update
+      await completeQuestDB(questId);
 
-    // Build player updates
-    const prevLevel = player.level;
-    const prevRank = getRankData(prevLevel).rank;
-    let newXP = player.xp + q.xp_reward;
-    let newLevel = player.level;
+      // Build player updates
+      const prevLevel = player.level;
+      const prevRank = getRankData(prevLevel).rank;
+      let newXP = (player.xp || 0) + q.xp_reward;
+      let newLevel = player.level;
 
-    // Level up loop
-    while (newXP >= XP_PER_LEVEL(newLevel)) {
-      newXP -= XP_PER_LEVEL(newLevel);
-      newLevel++;
-    }
+      // Level up loop
+      while (newXP >= XP_PER_LEVEL(newLevel)) {
+        newXP -= XP_PER_LEVEL(newLevel);
+        newLevel++;
+      }
 
-    // Stat boost
-    const statKey = q.stat_bonus === 'int' ? 'int_stat' : q.stat_bonus;
-    const statUpdates = statKey ? { [statKey]: (player[statKey] || 1) + 1 } : {};
+      // Stat boost
+      const statKey = q.stat_bonus === 'int' ? 'int_stat' : q.stat_bonus;
+      const statUpdates = statKey ? { [statKey]: (player[statKey] || 1) + 1 } : {};
 
-    // Heatmap
-    bumpHeatmap();
+      // Heatmap
+      bumpHeatmap();
 
-    player = await updatePlayer(currentUser.id, {
-      xp: newXP,
-      total_xp: player.total_xp + q.xp_reward,
-      gold: player.gold + q.gold_reward,
-      level: newLevel,
-      heatmap: player.heatmap,
-      ...statUpdates,
-    });
+      player = await updatePlayer(currentUser.id, {
+        xp: newXP,
+        total_xp: (player.total_xp || 0) + q.xp_reward,
+        gold: (player.gold || 0) + q.gold_reward,
+        level: newLevel,
+        heatmap: player.heatmap,
+        ...statUpdates,
+      });
 
-    updateStatsUI(player);
-    renderShop(player.gold, customRewards);
-    showToast(`✦ QUEST COMPLETE — +${q.xp_reward} XP, +${q.gold_reward} Gold`, 'gold');
+      updateStatsUI(player);
+      renderShop(player.gold, customRewards);
+      showToast(`✦ QUEST COMPLETE — +${q.xp_reward} XP, +${q.gold_reward} Gold`, 'gold');
 
-    // Level up event
-    if (newLevel > prevLevel) {
-      const newRank = getRankData(newLevel).rank;
-      showLevelUpModal(newLevel, prevRank, newRank);
-      screenFlash(getRankData(newLevel).color + '30');
-    }
+      // Level up event
+      if (newLevel > prevLevel) {
+        const newRank = getRankData(newLevel).rank;
+        showLevelUpModal(newLevel, prevRank, newRank);
+        screenFlash(getRankData(newLevel).color + '30');
+      }
 
-    // Boss quest = extract shadow
-    if (q.category === 'boss') {
-      await extractShadow();
+      // Boss quest = extract shadow
+      if (q.category === 'boss') {
+        await extractShadow();
+      }
+    } catch (e) {
+      q.completed = false;
+      renderAllQuests(todayQuests);
+      showToast('Error completing quest: ' + e.message, 'pen');
     }
   }
 
@@ -290,17 +303,23 @@ async function init() {
     if (!pendingPenaltyQuestId) return;
     const q = todayQuests.find(x => x.id === pendingPenaltyQuestId);
     if (!q) return;
-    const penalty = Math.floor(q.xp_reward * 0.3);
-    q.failed = true;
-    await failQuestDB(pendingPenaltyQuestId);
-    player = await updatePlayer(currentUser.id, {
-      xp: Math.max(0, player.xp - penalty),
-      total_xp: Math.max(0, player.total_xp - penalty),
-    });
-    updateStatsUI(player);
-    renderAllQuests(todayQuests);
-    showToast(`💀 PENALTY — -${penalty} XP. Do not fail again.`, 'pen');
-    pendingPenaltyQuestId = null;
+    try {
+      const penalty = Math.floor(q.xp_reward * 0.3);
+      q.failed = true;
+      await failQuestDB(pendingPenaltyQuestId);
+      player = await updatePlayer(currentUser.id, {
+        xp: Math.max(0, (player.xp || 0) - penalty),
+        total_xp: Math.max(0, (player.total_xp || 0) - penalty),
+      });
+      updateStatsUI(player);
+      renderAllQuests(todayQuests);
+      showToast(`💀 PENALTY — -${penalty} XP. Do not fail again.`, 'pen');
+      pendingPenaltyQuestId = null;
+    } catch (e) {
+      q.failed = false;
+      pendingPenaltyQuestId = null;
+      showToast('Error applying penalty: ' + e.message, 'pen');
+    }
   }
 
   // ── SHADOW EXTRACTION ────────────────────────────
@@ -328,12 +347,16 @@ async function init() {
     const name = document.getElementById('habitName').value.trim();
     const val = document.getElementById('habitXP').value; // "20,int"
     if (!name) return;
-    const [xp, stat] = val.split(',');
-    const h = await insertHabit(currentUser.id, name, parseInt(xp), stat);
-    habits.push(h);
-    document.getElementById('habitName').value = '';
-    renderHabits(habits);
-    showToast(`🔁 Habit "${name}" added to the System.`);
+    try {
+      const [xp, stat] = val.split(',');
+      const h = await insertHabit(currentUser.id, name, parseInt(xp), stat);
+      habits.push(h);
+      document.getElementById('habitName').value = '';
+      renderHabits(habits);
+      showToast(`🔁 Habit "${name}" added to the System.`);
+    } catch (e) {
+      showToast('Error adding habit: ' + e.message, 'pen');
+    }
   }
 
   async function doneHabit(habitId) {
@@ -341,54 +364,70 @@ async function init() {
     if (!h) return;
     const todayStr = today();
     if (h.last_done === todayStr) { showToast('Already done today.'); return; }
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-    const newStreak = h.last_done === yesterday ? h.streak + 1 : 1;
+    try {
+      const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+      const newStreak = h.last_done === yesterday ? (h.streak || 0) + 1 : 1;
 
-    const updated = await updateHabit(habitId, { last_done: todayStr, streak: newStreak });
-    Object.assign(h, updated);
+      const updated = await updateHabit(habitId, { last_done: todayStr, streak: newStreak });
+      Object.assign(h, updated);
 
-    // Stat bump
-    const statKey = h.stat_bonus === 'int' ? 'int_stat' : h.stat_bonus;
-    const statUpdates = statKey ? { [statKey]: (player[statKey] || 1) + 1 } : {};
+      // Stat bump
+      const statKey = h.stat_bonus === 'int' ? 'int_stat' : h.stat_bonus;
+      const statUpdates = statKey ? { [statKey]: (player[statKey] || 1) + 1 } : {};
 
-    bumpHeatmap();
-    player = await updatePlayer(currentUser.id, {
-      xp: player.xp + h.xp_per_day,
-      total_xp: player.total_xp + h.xp_per_day,
-      gold: player.gold + Math.floor(h.xp_per_day / 4),
-      heatmap: player.heatmap,
-      ...statUpdates,
-    });
+      bumpHeatmap();
+      player = await updatePlayer(currentUser.id, {
+        xp: (player.xp || 0) + h.xp_per_day,
+        total_xp: (player.total_xp || 0) + h.xp_per_day,
+        gold: (player.gold || 0) + Math.floor(h.xp_per_day / 4),
+        heatmap: player.heatmap,
+        ...statUpdates,
+      });
 
-    updateStatsUI(player);
-    renderHabits(habits);
-    renderHeatmap(player.heatmap);
-    showToast(`🔁 Habit done! +${h.xp_per_day} XP | Streak: ${newStreak} 🔥`, 'ok');
+      updateStatsUI(player);
+      renderHabits(habits);
+      renderHeatmap(player.heatmap);
+      showToast(`🔁 Habit done! +${h.xp_per_day} XP | Streak: ${newStreak} 🔥`, 'ok');
+    } catch (e) {
+      showToast('Error updating habit: ' + e.message, 'pen');
+    }
   }
 
   async function deleteHabitUI(habitId) {
-    await deleteHabit(habitId);
-    habits = habits.filter(h => h.id !== habitId);
-    renderHabits(habits);
+    try {
+      await deleteHabit(habitId);
+      habits = habits.filter(h => h.id !== habitId);
+      renderHabits(habits);
+    } catch (e) {
+      showToast('Error deleting habit: ' + e.message, 'pen');
+    }
   }
 
   // ── SHOP ─────────────────────────────────────────
   async function buyReward(id, name, cost, icon) {
-    if (player.gold < cost) { showToast('Not enough Gold.', 'pen'); return; }
-    player = await updatePlayer(currentUser.id, { gold: player.gold - cost });
-    await logPurchase(currentUser.id, name, cost);
-    updateStatsUI(player);
-    renderShop(player.gold, customRewards);
-    showToast(`${icon} Reward unlocked: "${name}". Enjoy it, Player.`, 'gold');
+    if ((player.gold || 0) < cost) { showToast('Not enough Gold.', 'pen'); return; }
+    try {
+      player = await updatePlayer(currentUser.id, { gold: player.gold - cost });
+      await logPurchase(currentUser.id, name, cost);
+      updateStatsUI(player);
+      renderShop(player.gold, customRewards);
+      showToast(`${icon} Reward unlocked: "${name}". Enjoy it, Player.`, 'gold');
+    } catch (e) {
+      showToast('Error buying reward: ' + e.message, 'pen');
+    }
   }
 
   async function buyCustomReward(id, name, cost, icon) {
-    if (player.gold < cost) { showToast('Not enough Gold.', 'pen'); return; }
-    player = await updatePlayer(currentUser.id, { gold: player.gold - cost });
-    await logPurchase(currentUser.id, name, cost);
-    updateStatsUI(player);
-    renderShop(player.gold, customRewards);
-    showToast(`${icon} Reward: "${name}" redeemed.`, 'gold');
+    if ((player.gold || 0) < cost) { showToast('Not enough Gold.', 'pen'); return; }
+    try {
+      player = await updatePlayer(currentUser.id, { gold: player.gold - cost });
+      await logPurchase(currentUser.id, name, cost);
+      updateStatsUI(player);
+      renderShop(player.gold, customRewards);
+      showToast(`${icon} Reward: "${name}" redeemed.`, 'gold');
+    } catch (e) {
+      showToast('Error buying reward: ' + e.message, 'pen');
+    }
   }
 
   async function addCustomRewardUI() {
@@ -396,32 +435,48 @@ async function init() {
     const cost = parseInt(document.getElementById('rCost').value) || 0;
     const icon = document.getElementById('rIcon').value.trim() || '🎁';
     if (!name || !cost) { showToast('Enter name and cost.'); return; }
-    const r = await insertCustomReward(currentUser.id, name, icon, cost);
-    customRewards.push(r);
-    document.getElementById('rName').value = '';
-    document.getElementById('rCost').value = '';
-    document.getElementById('rIcon').value = '';
-    renderShop(player.gold, customRewards);
-    showToast(`🎁 Custom reward "${name}" added.`, 'gold');
+    try {
+      const r = await insertCustomReward(currentUser.id, name, icon, cost);
+      customRewards.push(r);
+      document.getElementById('rName').value = '';
+      document.getElementById('rCost').value = '';
+      document.getElementById('rIcon').value = '';
+      renderShop(player.gold, customRewards);
+      showToast(`🎁 Custom reward "${name}" added.`, 'gold');
+    } catch (e) {
+      showToast('Error adding reward: ' + e.message, 'pen');
+    }
   }
 
   async function deleteCustomRewardUI(id) {
-    await deleteCustomReward(id);
-    customRewards = customRewards.filter(r => r.id !== id);
-    renderShop(player.gold, customRewards);
+    try {
+      await deleteCustomReward(id);
+      customRewards = customRewards.filter(r => r.id !== id);
+      renderShop(player.gold, customRewards);
+    } catch (e) {
+      showToast('Error removing reward: ' + e.message, 'pen');
+    }
   }
 
   // ── VISION ───────────────────────────────────────
   async function saveVision() {
-    const v = document.getElementById('visionTA').value;
-    player = await updatePlayer(currentUser.id, { vision: v });
-    showToast('🌟 Vision saved. Let it burn inside you.', 'ok');
+    try {
+      const v = document.getElementById('visionTA').value;
+      player = await updatePlayer(currentUser.id, { vision: v });
+      showToast('🌟 Vision saved. Let it burn inside you.', 'ok');
+    } catch (e) {
+      showToast('Error saving vision: ' + e.message, 'pen');
+    }
   }
 
   async function saveAntiVision() {
-    const v = document.getElementById('antiVisionTA').value;
-    player = await updatePlayer(currentUser.id, { anti_vision: v });
-    showToast('💀 Anti-Vision saved. Remember this on your weakest days.', 'pen');
+    try {
+      const v = document.getElementById('antiVisionTA').value;
+      player = await updatePlayer(currentUser.id, { anti_vision: v });
+      showToast('💀 Anti-Vision saved. Remember this on your weakest days.', 'pen');
+    } catch (e) {
+      showToast('Error saving anti-vision: ' + e.message, 'pen');
+    }
   }
 
   // ── AUTH SCREEN ──────────────────────────────────
