@@ -12,6 +12,10 @@ const APP = (() => {
   let customRewards = [];
   let pendingPenaltyQuestId = null;
 
+  // In-flight guards — prevent double-submit on rapid clicks
+  let _claimBusy = false;
+  const _inFlightHabits = new Set();
+
   // ── INIT ────────────────────────────────────────
 async function init() {
   const client = initSupabase();
@@ -73,10 +77,18 @@ async function init() {
     try {
       player = await getPlayer(currentUser.id);
     } catch {
-      // New user - profile auto-created by Supabase trigger
-      player = await upsertPlayer(currentUser.id, {
-        name: currentUser.user_metadata?.full_name || 'Player',
-      });
+      // New user — row not yet created; upsert a fresh profile
+      try {
+        player = await upsertPlayer(currentUser.id, {
+          name: currentUser.user_metadata?.full_name || 'Player',
+        });
+      } catch (e) {
+        // Both attempts failed — surface a clear message
+        document.getElementById('loadingScreen').classList.add('hidden');
+        document.getElementById('authScreen').classList.remove('hidden');
+        setAuthMsg('Failed to load profile. Check your connection and try again.', true);
+        return;
+      }
     }
 
     document.getElementById('authScreen').classList.add('hidden');
@@ -169,15 +181,25 @@ async function init() {
 
     // Penalty modal
     document.getElementById('acceptPenalty').onclick = acceptPenalty;
+    document.getElementById('cancelPenalty').onclick = () => {
+      pendingPenaltyQuestId = null;
+      document.getElementById('penaltyModal').classList.add('hidden');
+    };
 
-    // Level up modal
+    // Level up modal — button + click outside
     document.getElementById('closeLevelUp').onclick = () => {
       document.getElementById('levelUpModal').classList.add('hidden');
     };
+    document.getElementById('levelUpModal').onclick = (e) => {
+      if (e.target === e.currentTarget) document.getElementById('levelUpModal').classList.add('hidden');
+    };
 
-    // Arise modal
+    // Arise modal — button + click outside
     document.getElementById('closeAriseModal').onclick = () => {
       document.getElementById('ariseModal').classList.add('hidden');
+    };
+    document.getElementById('ariseModal').onclick = (e) => {
+      if (e.target === e.currentTarget) document.getElementById('ariseModal').classList.add('hidden');
     };
   }
 
@@ -193,6 +215,11 @@ async function init() {
 
   // ── LOGIN BONUS ──────────────────────────────────
   async function claimLoginBonus() {
+    if (_claimBusy) return;
+    _claimBusy = true;
+    const btn = document.getElementById('claimBtn');
+    btn.disabled = true;
+    btn.textContent = '...';
     try {
       const todayStr = today();
       const prevStreak = player.streak || 0;
@@ -201,22 +228,42 @@ async function init() {
       const xpBonus = 50 + Math.min(newStreak - 1, 14) * 5;
       const goldBonus = 10 + Math.floor(newStreak / 7) * 5;
 
+      // Calculate level-up from XP bonus
+      const prevLevel = player.level || 1;
+      const prevRank = getRankData(prevLevel).rank;
+      let newXP = (player.xp || 0) + xpBonus;
+      let newLevel = prevLevel;
+      while (newXP >= XP_PER_LEVEL(newLevel)) {
+        newXP -= XP_PER_LEVEL(newLevel);
+        newLevel++;
+      }
+
       bumpHeatmap();
       player = await updatePlayer(currentUser.id, {
         last_login: todayStr,
         streak: newStreak,
-        xp: (player.xp || 0) + xpBonus,
+        xp: newXP,
         total_xp: (player.total_xp || 0) + xpBonus,
         gold: (player.gold || 0) + goldBonus,
+        level: newLevel,
         heatmap: player.heatmap,
       });
 
       document.getElementById('loginBonus').classList.add('hidden');
       showToast(`✦ LOGIN BONUS — +${xpBonus} XP, +${goldBonus} Gold | Streak: ${newStreak} days 🔥`, 'gold');
       updateStatsUI(player);
-      checkLevelUp(player.xp - xpBonus, player.xp);
+
+      if (newLevel > prevLevel) {
+        const newRank = getRankData(newLevel).rank;
+        showLevelUpModal(newLevel, prevRank, newRank);
+        screenFlash(getRankData(newLevel).color + '30');
+      }
     } catch (e) {
+      btn.disabled = false;
+      btn.textContent = 'CLAIM XP';
       showToast('Error claiming bonus: ' + e.message, 'pen');
+    } finally {
+      _claimBusy = false;
     }
   }
 
@@ -324,22 +371,26 @@ async function init() {
 
   // ── SHADOW EXTRACTION ────────────────────────────
   async function extractShadow() {
-    // Pick a shadow from pool that isn't already owned
-    const ownedNames = shadows.map(s => s.name);
-    const available = SHADOW_POOL.filter(s => !ownedNames.includes(s.name));
-    const pool = available.length ? available : SHADOW_POOL;
-    const chosen = pool[Math.floor(Math.random() * pool.length)];
+    // Independent try-catch: shadow extraction failure must NOT roll back quest XP
+    try {
+      const ownedNames = shadows.map(s => s.name);
+      const available = SHADOW_POOL.filter(s => !ownedNames.includes(s.name));
+      const pool = available.length ? available : SHADOW_POOL;
+      const chosen = pool[Math.floor(Math.random() * pool.length)];
 
-    const newShadow = await insertShadow(currentUser.id, chosen);
-    shadows.unshift(newShadow);
+      const newShadow = await insertShadow(currentUser.id, chosen);
+      shadows.unshift(newShadow);
 
-    player = await updatePlayer(currentUser.id, {
-      shadow_count: (player.shadow_count || 0) + 1,
-    });
+      player = await updatePlayer(currentUser.id, {
+        shadow_count: (player.shadow_count || 0) + 1,
+      });
 
-    showAriseModal(chosen);
-    updateStatsUI(player);
-    renderShadows(shadows, player.shadow_count);
+      showAriseModal(chosen);
+      updateStatsUI(player);
+      renderShadows(shadows, player.shadow_count);
+    } catch (e) {
+      showToast('Shadow extraction failed: ' + e.message, 'pen');
+    }
   }
 
   // ── HABITS ───────────────────────────────────────
@@ -364,6 +415,8 @@ async function init() {
     if (!h) return;
     const todayStr = today();
     if (h.last_done === todayStr) { showToast('Already done today.'); return; }
+    if (_inFlightHabits.has(habitId)) return;
+    _inFlightHabits.add(habitId);
     try {
       const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
       const newStreak = h.last_done === yesterday ? (h.streak || 0) + 1 : 1;
@@ -390,13 +443,18 @@ async function init() {
       showToast(`🔁 Habit done! +${h.xp_per_day} XP | Streak: ${newStreak} 🔥`, 'ok');
     } catch (e) {
       showToast('Error updating habit: ' + e.message, 'pen');
+    } finally {
+      _inFlightHabits.delete(habitId);
     }
   }
 
   async function deleteHabitUI(habitId) {
+    const h = habits.find(x => x.id === habitId);
+    if (!h) return;
+    if (!confirm(`Remove habit "${h.name}"? This cannot be undone.`)) return;
     try {
       await deleteHabit(habitId);
-      habits = habits.filter(h => h.id !== habitId);
+      habits = habits.filter(x => x.id !== habitId);
       renderHabits(habits);
     } catch (e) {
       showToast('Error deleting habit: ' + e.message, 'pen');
@@ -404,30 +462,30 @@ async function init() {
   }
 
   // ── SHOP ─────────────────────────────────────────
-  async function buyReward(id, name, cost, icon) {
+  async function _purchaseReward(name, cost, icon, isCustom) {
     if ((player.gold || 0) < cost) { showToast('Not enough Gold.', 'pen'); return; }
     try {
       player = await updatePlayer(currentUser.id, { gold: player.gold - cost });
       await logPurchase(currentUser.id, name, cost);
       updateStatsUI(player);
       renderShop(player.gold, customRewards);
-      showToast(`${icon} Reward unlocked: "${name}". Enjoy it, Player.`, 'gold');
+      const msg = isCustom ? `${icon} Reward: "${name}" redeemed.` : `${icon} Reward unlocked: "${name}". Enjoy it, Player.`;
+      showToast(msg, 'gold');
     } catch (e) {
       showToast('Error buying reward: ' + e.message, 'pen');
     }
   }
 
-  async function buyCustomReward(id, name, cost, icon) {
-    if ((player.gold || 0) < cost) { showToast('Not enough Gold.', 'pen'); return; }
-    try {
-      player = await updatePlayer(currentUser.id, { gold: player.gold - cost });
-      await logPurchase(currentUser.id, name, cost);
-      updateStatsUI(player);
-      renderShop(player.gold, customRewards);
-      showToast(`${icon} Reward: "${name}" redeemed.`, 'gold');
-    } catch (e) {
-      showToast('Error buying reward: ' + e.message, 'pen');
-    }
+  // Default rewards pass data from hardcoded config — safe
+  function buyReward(id, name, cost, icon) {
+    return _purchaseReward(name, cost, icon, false);
+  }
+
+  // Custom rewards: only pass the ID from inline onclick; look up data locally to avoid XSS
+  function buyCustomReward(rewardId) {
+    const r = customRewards.find(x => x.id === rewardId);
+    if (!r) return;
+    return _purchaseReward(r.name, r.cost, r.icon || '🎁', true);
   }
 
   async function addCustomRewardUI() {
@@ -499,11 +557,6 @@ async function init() {
     const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 86400000);
     const idx = Math.min(dayOfYear % 84, 83);
     player.heatmap[idx] = Math.min(4, (player.heatmap[idx] || 0) + 1);
-  }
-
-  // ── LEVEL UP CHECK ───────────────────────────────
-  function checkLevelUp(prevXP, newXP) {
-    // Simple check — proper check happens in completeQuest
   }
 
   // ── UTILS ────────────────────────────────────────

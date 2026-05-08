@@ -14,6 +14,9 @@
   .nav-links { display: none; }
   .app-main { padding-top: 48px; }
 
+  /* Toast must clear the bottom nav (56px) + some breathing room */
+  .toast { bottom: 72px; right: 12px; left: 12px; max-width: none; }
+
   .bottom-nav {
     position: fixed;
     bottom: 0; left: 0; right: 0;

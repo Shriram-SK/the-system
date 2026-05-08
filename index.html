@@ -21,6 +21,9 @@
 </head>
 <body>
 
+<!-- Offline indicator (shown via body.offline class) -->
+<div class="offline-bar" id="offlineBar">⚠ OFFLINE — Changes won't save until reconnected</div>
+
 <!-- ══ LOADING SCREEN ══ -->
 <div id="loadingScreen" class="loading-screen">
   <div class="loading-inner">
@@ -209,7 +212,7 @@
         <span>HABIT MATRIX — Consistency builds your shadow army. Break the chain and face regression.</span>
       </div>
       <div class="habit-add-row">
-        <input class="si" id="habitName" placeholder="Habit name (e.g. Morning run, No sugar)...">
+        <input class="si" id="habitName" placeholder="Habit name (e.g. Morning run, No sugar)..." maxlength="80" autocomplete="off">
         <select class="si" id="habitXP">
           <option value="10,str">+10 XP → STR</option>
           <option value="10,agi">+10 XP → AGI</option>
@@ -247,9 +250,9 @@
       <div class="shop-grid" id="shopGrid"></div>
       <div class="sec-head" style="margin-top:24px;"><h3>✦ ADD CUSTOM REWARD</h3><div class="sec-line"></div></div>
       <div class="custom-add-row">
-        <input class="si" id="rName" placeholder="Reward name...">
-        <input class="si" id="rCost" type="number" placeholder="Gold cost..." style="width:130px;">
-        <input class="si" id="rIcon" placeholder="Emoji..." style="width:80px;">
+        <input class="si" id="rName" placeholder="Reward name..." maxlength="60" autocomplete="off">
+        <input class="si" id="rCost" type="number" placeholder="Gold cost..." style="width:130px;" min="1" max="9999">
+        <input class="si" id="rIcon" placeholder="Emoji..." style="width:80px;" maxlength="8">
         <button class="btn btn-gold" id="addRewardBtn">+ ADD</button>
       </div>
       <div class="shop-grid" id="customShopGrid" style="margin-top:12px;"></div>
@@ -302,6 +305,7 @@
     <p id="penaltyMsg">You have abandoned a quest.</p>
     <div class="modal-acts">
       <button class="btn btn-red" id="acceptPenalty">ACCEPT PENALTY</button>
+      <button class="btn btn-ghost" id="cancelPenalty">CANCEL</button>
     </div>
   </div>
 </div>

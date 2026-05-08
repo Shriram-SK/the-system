@@ -195,15 +195,29 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 
 /* BUTTONS */
 .btn{padding:7px 14px;border-radius:4px;border:1px solid;font-family:var(--font-body);font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .2s;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;}
+.btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none;}
 .btn-blue{background:rgba(74,158,255,.1);border-color:var(--blue-dim);color:var(--blue);}
-.btn-blue:hover{background:rgba(74,158,255,.2);box-shadow:0 0 14px var(--blue-glow);}
+.btn-blue:hover:not(:disabled){background:rgba(74,158,255,.2);box-shadow:0 0 14px var(--blue-glow);}
 .btn-gold{background:rgba(255,215,0,.08);border-color:var(--gold-dim);color:var(--gold);}
-.btn-gold:hover{background:rgba(255,215,0,.15);}
+.btn-gold:hover:not(:disabled){background:rgba(255,215,0,.15);}
 .btn-red{background:rgba(255,74,74,.08);border-color:var(--red-dim);color:var(--red);}
-.btn-red:hover{background:rgba(255,74,74,.16);}
+.btn-red:hover:not(:disabled){background:rgba(255,74,74,.16);}
 .btn-green{background:rgba(74,255,138,.08);border-color:var(--green-dim);color:var(--green);}
-.btn-green:hover{background:rgba(74,255,138,.16);}
+.btn-green:hover:not(:disabled){background:rgba(74,255,138,.16);}
+.btn-ghost{background:transparent;border-color:var(--border);color:var(--muted);}
+.btn-ghost:hover:not(:disabled){border-color:var(--border2);color:var(--text);}
 .btn-sm{padding:4px 9px;font-size:11px;}
+
+/* Quest item state indicators (replaces inline styles) */
+.qi-done-check{color:var(--green);font-size:20px;flex-shrink:0;}
+.qi-failed-label{color:var(--red);font-size:10px;font-family:var(--font-mono);flex-shrink:0;}
+
+/* Habit row meta text */
+.habit-meta{font-family:var(--font-mono);font-size:10px;color:var(--green);}
+.habit-complete-label{font-family:var(--font-mono);font-size:10px;color:var(--green);}
+
+/* Empty state hint */
+.empty-hint{font-size:13px;color:var(--muted);padding:10px 0;}
 
 /* SHADOWS */
 .shadows-header{display:flex;align-items:center;gap:24px;background:linear-gradient(135deg,rgba(155,109,255,.08),rgba(74,158,255,.05));border:1px solid var(--purple-dim);border-radius:8px;padding:20px 24px;margin-bottom:20px;}

@@ -3,6 +3,17 @@
 // All rendering and UI update functions
 // ══════════════════════════════════════════════════
 
+// ── HTML ESCAPE (prevents XSS in all innerHTML renders) ───────────────
+function escapeHTML(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // ── TOAST ─────────────────────────────────────────
 function showToast(msg, type = '') {
   const t = document.getElementById('toast');
@@ -80,7 +91,7 @@ function updateStatsUI(player) {
   rl.style.color = rank.color;
   if (rank.rank === 'MONARCH') badge.style.boxShadow = `0 0 20px ${rank.color}40`;
 
-  // Player info
+  // Player info (textContent is safe; listed here for consistency)
   document.getElementById('playerName').textContent = player.name || 'PLAYER';
   document.getElementById('playerClass').textContent = getPlayerClass(lv);
   document.getElementById('playerTitle').textContent = getPlayerTitle(lv);
@@ -88,7 +99,7 @@ function updateStatsUI(player) {
   // Attributes
   updateAttributes(player);
 
-  // Alert
+  // Alert (textContent — already safe)
   document.getElementById('alertText').textContent =
     `SYSTEM ALERT — ${player.name || 'Player'}, Rank ${rank.rank}, Level ${lv}. Continue your ascent.`;
 }
@@ -150,23 +161,23 @@ function renderQuestItem(q) {
 
   return `
   <div class="qi ${q.category} ${cls} ${isBoss ? 'boss-pulse' : ''}" id="qi-${q.id}">
-    <div class="qi-icon">${q.icon}</div>
+    <div class="qi-icon">${escapeHTML(q.icon)}</div>
     <div class="qi-info">
-      <div class="qn">${q.name}</div>
-      <div class="qm">${q.category.toUpperCase()} · ${q.difficulty.toUpperCase()} ${q.failed ? '· FAILED' : ''}</div>
+      <div class="qn">${escapeHTML(q.name)}</div>
+      <div class="qm">${escapeHTML(q.category.toUpperCase())} · ${escapeHTML(q.difficulty.toUpperCase())} ${q.failed ? '· FAILED' : ''}</div>
     </div>
     <div class="qi-pills">
       <span class="pill px">+${q.xp_reward} XP</span>
       <span class="pill pg">+${q.gold_reward}G</span>
-      ${statLabel ? `<span class="pill pa">${statLabel}</span>` : ''}
+      ${statLabel ? `<span class="pill pa">${escapeHTML(statLabel)}</span>` : ''}
     </div>
     ${!q.completed && !q.failed ? `
     <div class="qi-acts">
       <button class="btn btn-green btn-sm" onclick="APP.completeQuest(${q.id}, event)">✓</button>
       <button class="btn btn-red btn-sm" onclick="APP.failQuest(${q.id})">✗</button>
     </div>` : q.completed
-      ? `<div style="color:var(--green);font-size:20px;flex-shrink:0;">✓</div>`
-      : `<div style="color:var(--red);font-size:10px;font-family:var(--font-mono);flex-shrink:0;">FAILED</div>`}
+      ? `<div class="qi-done-check">✓</div>`
+      : `<div class="qi-failed-label">FAILED</div>`}
   </div>`;
 }
 
@@ -195,6 +206,7 @@ function renderGateHeader(player) {
   startGateTimer();
 }
 
+let _gateInterval = null;
 function startGateTimer() {
   function tick() {
     const now = new Date();
@@ -208,8 +220,8 @@ function startGateTimer() {
     if (el) el.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   }
   tick();
-  if (window._gateInterval) clearInterval(window._gateInterval);
-  window._gateInterval = setInterval(tick, 1000);
+  if (_gateInterval) clearInterval(_gateInterval);
+  _gateInterval = setInterval(tick, 1000);
 }
 
 // ── SHADOWS ───────────────────────────────────────
@@ -290,16 +302,16 @@ function renderHabits(habits) {
     return `<div class="qi discipline ${done ? 'done' : ''}">
       <div class="qi-icon">${done ? '✅' : '⬜'}</div>
       <div class="qi-info">
-        <div class="qn">${h.name}</div>
-        <div style="font-family:var(--font-mono);font-size:10px;color:var(--green);">
-          🔥 ${h.streak} day streak · +${h.xp_per_day} XP/day · ${h.stat_bonus ? '→ ' + h.stat_bonus.toUpperCase() : ''}
+        <div class="qn">${escapeHTML(h.name)}</div>
+        <div class="habit-meta">
+          🔥 ${h.streak || 0} day streak · +${h.xp_per_day} XP/day · ${h.stat_bonus ? '→ ' + h.stat_bonus.toUpperCase() : ''}
         </div>
       </div>
       <div class="qi-acts">
         ${!done
           ? `<button class="btn btn-green btn-sm" onclick="APP.doneHabit(${h.id})">DONE</button>`
-          : `<span style="font-family:var(--font-mono);font-size:10px;color:var(--green);">COMPLETE</span>`}
-        <button class="btn btn-red btn-sm" onclick="APP.deleteHabitUI(${h.id})">✕</button>
+          : `<span class="habit-complete-label">COMPLETE</span>`}
+        <button class="btn btn-red btn-sm" onclick="APP.deleteHabitUI(${h.id})" title="Delete habit">✕</button>
       </div>
     </div>`;
   }).join('');
@@ -332,13 +344,14 @@ function renderShop(gold, customRewards) {
 
   const cgrid = document.getElementById('customShopGrid');
   if (!customRewards?.length) {
-    cgrid.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:10px 0;">Add a custom reward above.</div>';
+    cgrid.innerHTML = '<div class="empty-hint">Add a custom reward above.</div>';
   } else {
     cgrid.innerHTML = customRewards.map(r => {
       const canAfford = gold >= r.cost;
-      return `<div class="sc ${!canAfford ? 'locked' : ''}" onclick="APP.buyCustomReward(${r.id},'${r.name}',${r.cost},'${r.icon}')">
-        <div class="sc-icon">${r.icon}</div>
-        <div class="sc-name">${r.name}</div>
+      // Only pass numeric ID — buyCustomReward looks up name/cost/icon locally (prevents XSS)
+      return `<div class="sc ${!canAfford ? 'locked' : ''}" onclick="APP.buyCustomReward(${r.id})">
+        <div class="sc-icon">${escapeHTML(r.icon || '🎁')}</div>
+        <div class="sc-name">${escapeHTML(r.name)}</div>
         <div class="sc-cost">${r.cost} Gold</div>
         <button class="btn btn-red btn-sm" style="margin-top:8px;" onclick="event.stopPropagation();APP.deleteCustomRewardUI(${r.id})">REMOVE</button>
       </div>`;

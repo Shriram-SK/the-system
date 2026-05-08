@@ -52,11 +52,6 @@ async function signOut() {
   if (error) throw error;
 }
 
-async function getSession() {
-  const { data } = await supabaseClient.auth.getSession();
-  return data.session;
-}
-
 // ── PLAYER ────────────────────────────────────────
 async function getPlayer(userId) {
   const { data, error } = await supabaseClient

@@ -69,11 +69,3 @@ function getRankData(lv) {
   return RANKS.find(r => lv >= r.min && lv <= r.max) || RANKS[0];
 }
 
-// ── STAT that maps to quest category ──
-const CAT_STAT = {
-  fitness:    'str',
-  nutrition:  'vit',
-  mind:       'int',
-  discipline: 'per',
-  boss:       'sen',
-};
